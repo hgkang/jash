@@ -1,0 +1,22 @@
+
+
+<10/5>
+jison bash2.jison; node './intep.js' 까지 완료 
+- bash2.jison + absyn.js + intep.js 조합
+- "a1 a2 a3; b1 b_2; _c" 형태에 대한 parsing & pretty printing
+
+- next: integration into terminal 
+- basic command processing (interp)
+
+
+node 명령어 지원 (jash 개발에도 필요하다) 
+
+Use case: 
+> (terminial execution)
+> node calculator.jison    (calculator.js 를 생성함) 
+
+
+
+<webida>
+단축키등으로 시간 삽입기능 (log, history등 쓸때 편리)
+file system error message에서 보안 문제 있음 (exact error message/code)

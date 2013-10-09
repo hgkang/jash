@@ -1,0 +1,2 @@
+export PATH=$PATH:.:~/ws1/jash/node_modules/jison/lib
+
