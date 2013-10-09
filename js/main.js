@@ -1,31 +1,3 @@
-//var dojoConfig = {
-//    async: true,
-//    baseUrl: ((function () {
-//        var temp = document.URL.substr(0,  document.URL.lastIndexOf('?'));
-//        return temp.substr(0, temp.lastIndexOf('/'));
-//    }) ()),
-//    parseOnLoad: false,
-//    packages: [
-//        { name: 'dojo', location: 'lib/dojo-release-1.9.0/dojo' },
-//        { name: 'dijit', location: 'lib/dojo-release-1.9.0/dijit' },
-//        { name: 'dojox', location: 'lib/dojo-release-1.9.0/dojox' },
-//    ],
-//    paths: {
-//        'underscore' : 'lib/lodash.min',
-//        webida: '//' + document.cookie.replace(/(?:(?:^|.*;\s*)webida\.host\s*\=\s*([^;]*).*$)|^.*$/, "$1")
-//    },
-//    aliases: [
-//        ['text', 'dojo/text']
-//    ]
-//};
-//
-//
-
-
-
-
-
-
 
 function getAppRootURL() {
     var temp = document.URL.substr(0,  document.URL.lastIndexOf('?'));
@@ -40,8 +12,6 @@ require.config({
         //bash: 'bash_grammar'
     }
 });
-
-
 
 function log () {
     var debug = true;
@@ -71,7 +41,6 @@ $.extend_if_has = function(desc, source, array) {
     }
     return desc;
 };
-
 
 
 ///-------------------------
@@ -138,21 +107,12 @@ function walker (doit,n,acc) {
 }
 
 bash2.yy.walker = walker;
-                    
+
 require(['webida/webida', 'underscore'],function(webida, _) {
-
-//	calc.parse('1+1');
-//    var parser = bash2.parser;
-    //bash2.yy = absyn;
-    //console.log(bash2);
-    //console.log(absyn);
-//    var parse = exports.parse = parser.parse;
-//    parse("a1 a2 a3; b1 b_2; _c");
-
     var destFS;
     var mount;
     var pwd = '/';    
-    
+        
     webida.auth.myinfo (function(error, user_info) {
         if (error) {  alert('Terminal app can be used only when logged in' + error.reason);   }
         else {
@@ -161,13 +121,6 @@ require(['webida/webida', 'underscore'],function(webida, _) {
             log('dstFS=',destFS);
         }
     });                
-    
-
-//    var interp = { 
-//        echo: function(arg1) { this.echo(arg1); },
-//        add: function(a,b) { this.echo(a+b); }
-//        
-//    };
     
     (function($) {
         $.fn.tilda = function(interp, options) {
