@@ -26,6 +26,7 @@ function log () {
 }
 
 function error(s) { throw s; }
+function todo(s) { throw "TODO: " + s; }
 
 String.prototype.strip = function(char) {
     return this.replace(new RegExp("^" + char + "*"), '').
@@ -41,7 +42,6 @@ $.extend_if_has = function(desc, source, array) {
     }
     return desc;
 };
-
 
 ///-------------------------
 // extending parser 
@@ -111,7 +111,8 @@ bash2.yy.walker = walker;
 require(['webida/webida', 'underscore'],function(webida, _) {
     var destFS;
     var mount;
-    var pwd = '/';    
+    
+    
         
     webida.auth.myinfo (function(error, user_info) {
         if (error) {  alert('Terminal app can be used only when logged in' + error.reason);   }
@@ -123,18 +124,18 @@ require(['webida/webida', 'underscore'],function(webida, _) {
     });                
     
     (function($) {
-        $.fn.tilda = function(interp, options) {
-            if ($('body').data('tilda')) {
-                return $('body').data('tilda').terminal;
+        $.fn.wash = function(interp, options) {
+            if ($('body').data('wash')) {
+                return $('body').data('wash').terminal;
             }
-            this.addClass('tilda');
+            this.addClass('wash');
             options = options || {};
             interp = interp || function(command, term) {
-                term.echo("you don't set interp for tilda");
+                term.echo("you don't set interp for wash");
             };
             var settings = {
                 prompt: pwd + '> ',
-                name: 'tilda',
+                name: 'wash',
                 height: 200,
                 enabled: true,
                 greetings: 'Welcome to "wash" world',
@@ -160,7 +161,7 @@ require(['webida/webida', 'underscore'],function(webida, _) {
                     });
                 }
             });
-            $('body').data('tilda', this);
+            $('body').data('wash', this);
             //this.hide();
             return self;
         };
@@ -168,9 +169,11 @@ require(['webida/webida', 'underscore'],function(webida, _) {
     
 
     jQuery(document).ready(function($) {
-        $('#tilda').tilda(interp_); 
+        $('#wash').wash(interp_); 
     });
     
+    var pwd = '/'; 
+    var home = '/';
 
     //--------------------------------------------------------------------------    
     function Interpreter(terminal) {
@@ -191,12 +194,33 @@ require(['webida/webida', 'underscore'],function(webida, _) {
                     else if (args[0].charAt(0) == '/') {
                         lsPath = args[0];
                     }
+                    else if (args[0].charAt(0) == '.') {
+                        lsPath = pwd + args[0].substring(1);
+                    }
                     else {
                         lsPath = pwd + args[0];
                     }
-                    list_dir(echo, lsPath);
+                    list_dir(echo, lsPath.replace('//','/'));
                     break;
-                case 'cd':
+                case 'cd': // 성공 (해당 디렉토리 존재) 했을때만 pwd 설정하도록
+                    var path = pwd;
+                    if (args.length ===0) {
+                        path = home;
+                    } else if (args[0].charAt(0) == '/') {
+                        pwd = args[0];
+                    } else if (args[0].charAt(0) == '.') {
+                        if (args[0].length == 1) {                          
+                            // do nothing
+                        } else if (args[0].charAt(1) == '.') {
+                            todo(); 
+                            // parentOf(pwd) 에서 부터 뭔가하고, 성공하면 pwd 바꾸기
+                        }
+                    }
+                    else {
+                        pwd = (pwd + args[0]).replace('//','/');
+                    }
+                    terminal.set_prompt(pwd + ' >');                    
+                    break;
                 default:
                     for (i=0; i<words.length; i++) {
                         echo (words[i].data + ' ');

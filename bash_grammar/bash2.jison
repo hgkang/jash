@@ -1,7 +1,7 @@
 /* lexical grammar */
 %lex
 digit                       [0-9]
-id                          [\/_a-zA-Z][\/_a-zA-Z0-9]*
+id                          [\/_\.a-zA-Z][\/_\.a-zA-Z0-9]*
 
 %%
 {digit}+				 	return 'NUMBER'
