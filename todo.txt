@@ -18,8 +18,11 @@ Use case:
 
 <webida>
 - 단축키등으로 시간 삽입기능 (log, history등 쓸때 편리)
-- file system error message에서 보안 문제 있음 (exact error message/code)
-- webida editor 반응성이 많이 느려짐 (cursor이동, selection, typing 반응 등)
-- require.. 형태로 동적으로 읽어 들이는 내 디렉토리에 없는 소스에 대한 code assist 
-  (마찬가지로 CDN등 web protocol을 읽어서 할 수 있는가?)
-- content assist UX 확실한 개선이 필요하다 (명시적으로 보이도록 해서 관성/충성도 유도)  
+
+
+
+
+
+
+
+

@@ -14,7 +14,7 @@ var setMixin = {
         this._items.push.apply(this._items, setB._items || setB); 
         return this;
     },
-    eq: function eq (set) {
+    eq: function eq (set) { 
         return this._items.length === set._items.length && this.subset(set); 
     },
     indexOf: function indexOf (item) {

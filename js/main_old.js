@@ -1,3 +1,5 @@
+/** @see //webida.js */
+
 
 function getAppRootURL() {
     var temp = document.URL.substr(0,  document.URL.lastIndexOf('?'));
@@ -6,8 +8,11 @@ function getAppRootURL() {
 
 require.config({
     //baseUrl: getAppRootURL() + '/js',    
+    baseUrl: '.',
+    //baseUrl: './',
     "paths": {
-        webida: '//' + document.cookie.replace(/(?:(?:^|.*;\s*)webida\.host\s*\=\s*([^;]*).*$)|^.*$/, "$1"),
+//        webida: '//' + document.cookie.replace(/(?:(?:^|.*;\s*)webida\.host\s*\=\s*([^;]*).*$)|^.*$/, "$1"),
+        webida: '//webida.js',
         underscore: 'js/lodash.min',        
         //bash: 'bash_grammar'
     }
@@ -46,38 +51,39 @@ $.extend_if_has = function(desc, source, array) {
 ///-------------------------
 // extending parser 
 //--------------------------
-bash2.yy.ppNode = function (n, pp) { 
-    function ps(n) { 
-        var s = "";
-        switch(n.kind) {                                
-            case 'SEQ': 
-                s = n.data.reduce(function(acc,item) { 
-                    if (acc==="") { return ps(item); }
-                    else {return acc+';\n'+ps(item);} 
-                },"");
-                return s;
-            case 'SIMPLE_COMMAND':
-                s = n.data.reduce(function(acc,item) { 
-                    if (acc==="") { return ps(item); }
-                    else {return acc+' '+ ps(item); }
-                },"");
-                return s;
-            case 'WORD':
-                return n.data;
-            default:
-                break;
-        }
-    }
-    if (pp === undefined) {
-        console.log ('<pp result>\n'+ ps(n));
-    } else {
-        pp(ps(n));
-    }
-};
+//bash2.yy.ppNode = function (n, pp) { 
+//    function ps(n) { 
+//        var s = "";
+//        switch(n.kind) {                                
+//            case 'SEQ': 
+//                s = n.data.reduce(function(acc,item) { 
+//                    if (acc==="") { return ps(item); }
+//                    else {return acc+';\n'+ps(item);} 
+//                },"");
+//                return s;
+//            case 'SIMPLE_COMMAND':
+//                s = n.data.reduce(function(acc,item) { 
+//                    if (acc==="") { return ps(item); }
+//                    else {return acc+' '+ ps(item); }
+//                },"");
+//                return s;
+//            case 'WORD':
+//                return n.data;
+//            default:
+//                break;
+//        }
+//    }
+//    if (pp === undefined) {
+//        console.log ('<pp result>\n'+ ps(n));
+//    } else {
+//        pp(ps(n));
+//    }
+//};
 bash2.yy.Node = function (kind, data) {
     this.kind = kind;
     this.data = data;
 };
+
 
 function walker (doit,n,acc) {
     var recur = walker.bind(this, doit);
@@ -111,9 +117,12 @@ bash2.yy.walker = walker;
 require(['webida/webida', 'underscore'],function(webida, _) {
     var destFS;
     var mount;
+
+
     
+	//temp (from IDE)       
+    webida.auth.initAuth('Zu1j2lUb9yM6UM3r'); 
     
-        
     webida.auth.myinfo (function(error, user_info) {
         if (error) {  alert('Terminal app can be used only when logged in' + error.reason);   }
         else {
@@ -133,6 +142,7 @@ require(['webida/webida', 'underscore'],function(webida, _) {
             interp = interp || function(command, term) {
                 term.echo("you don't set interp for wash");
             };
+            
             var settings = {
                 prompt: pwd + '> ',
                 name: 'wash',
@@ -151,6 +161,8 @@ require(['webida/webida', 'underscore'],function(webida, _) {
             this.append('<div class="td"></div>');
             var self = this;
             self.terminal = this.find('.td').terminal(interp, settings);
+            
+            
             var focus = true;
             $(document.documentElement).keypress(function(e) {
                 if (e.which == 96) {
@@ -172,44 +184,122 @@ require(['webida/webida', 'underscore'],function(webida, _) {
         $('#wash').wash(interp_); 
     });
     
-    var pwd = '/'; 
-    var home = '/';
+    //var pwd = '/'; 
+    //var home = '/';
+
+	//----------------------------
+    // Expansion 
+    //----------------------------
+    function f_reduce(list,acc) { 
+        for (var i=0; i<list.length; i++) {
+            acc = list[i](acc);            
+        }
+        return acc;
+    }
+    function expand(s,echo) {
+        var r = /{[^{}]+}/;
+        r = /{(?!})[^{}]+}/;  //    ??????
+        
+        
+        var match = s.match(r);
+        var result = [];
+        if (match) {
+//            echo('then');
+            var pre = s.substr(0, match.index);
+            var inner = s.substr(match.index+1, match[0].length-2);
+            var inners = inner.split(',');
+            var post = s.slice(match.index+match[0].length);
+//            echo('pre='+pre + ' inner=' + inner + ' inners=' + inners + ' post=' + post);
+            for (var i=0; i< inners.length; i++) {
+//                echo(inners[i]);
+                result = result.concat([pre+inners[i]+post]);
+//                echo('result='+result);
+            }
+            //echo(result);
+            var acc = [];
+            for (i=0; i<result.length; i++) {
+                acc = acc.concat(expand(result[i],echo));
+            }           
+            return acc;
+        }
+        else {
+//            echo('else');
+            //echo(s);
+            return s;
+        }
+    }
+    
+    
+    function test(ws, echo) {
+        ws = [
+            "a{1,b{1,2,{}}c,e}f",
+            'a{1,2}c',
+            '{}'
+        ];
+              
+        for (var i=0; i<ws.length; i++) {
+            echo('test case='+ws[i]+', result=' + expand(ws[i],echo));
+        }
+    }
 
     //--------------------------------------------------------------------------    
     function Interpreter(terminal) {
+        // temp
+        //test([],terminal.echo); return; 
+   
+        
         this.echo = terminal.echo;
-        this.simple_command = function (words, env) {            
+            
+            //return;                    
+        this.simple_command = function (words, env) {
             echo = this.echo;
-            var command = words[0].data;
+            function serror(s) { echo("Webida Server Error: "+s); }
+            var command = words[0];
             var args = [];
             for (var i=1; i<words.length; i++) {
-                args = args.concat(words[i].data);  
+                args = args.concat(words[i]);  
             }
-            switch(words[0].data) {
+            switch(words[0]) {
                 case 'ls':
                     var lsPath;
                     if (args.length === 0) {
-                        lsPath = pwd;
+                        lsPath = env.pwd;
                     }
                     else if (args[0].charAt(0) == '/') {
                         lsPath = args[0];
                     }
                     else if (args[0].charAt(0) == '.') {
-                        lsPath = pwd + args[0].substring(1);
+                        lsPath = env.pwd + args[0].substring(1);
                     }
                     else {
-                        lsPath = pwd + args[0];
+                        lsPath = env.pwd + args[0];
                     }
                     list_dir(echo, lsPath.replace('//','/'));
                     break;
                 case 'cd': // 성공 (해당 디렉토리 존재) 했을때만 pwd 설정하도록
-                    var path = pwd;
+                    // normalized path: 
+                    function prompt(path) {
+                        path = env.pwd;
+                        terminal.set_prompt(env.pwd + '>');
+                    }
+                    function doIfExists(path) {
+                        mount.exists(path, function(error, exists) {
+                            if (error) serror(error);
+                            else if (exists) {
+                                env.pwd = path;
+                                prompt(path);
+                            }
+                            else { 
+                                echo(path + ': No such file or directory');
+                            }
+                        });                    
+                    }
                     if (args.length ===0) {
-                        path = home;
-                    } else if (args[0].charAt(0) == '/') {
-                        pwd = args[0];
+                        prompt(env.home);
+                    } else if (args[0].charAt(0) == '/') {                        
+                        doIfExists(args[0]);                        
                     } else if (args[0].charAt(0) == '.') {
-                        if (args[0].length == 1) {                          
+                        if (args[0].length == 1) {
                             // do nothing
                         } else if (args[0].charAt(1) == '.') {
                             todo(); 
@@ -217,17 +307,18 @@ require(['webida/webida', 'underscore'],function(webida, _) {
                         }
                     }
                     else {
-                        pwd = (pwd + args[0]).replace('//','/');
+                        doIfExists((env.pwd + args[0]).replace('//','/'));
                     }
-                    terminal.set_prompt(pwd + ' >');                    
                     break;
                 default:
                     for (i=0; i<words.length; i++) {
-                        echo (words[i].data + ' ');
+                        echo (words[i] + ' ');
                     }    
                     break;
             }
+            console.log(env);
             return env; // no update yet,
+            
         };    
     }      
 
@@ -251,11 +342,15 @@ require(['webida/webida', 'underscore'],function(webida, _) {
         
     function interp_ (input, terminal) {
         var interpreter = new Interpreter(terminal);
-        var absyn = bash2.parse(input);        
-        var env = 'not used yet'; 
+        var absyn = bash2.parse(input);
+        var env = { pwd:'/', home:'/' } ; 
+               
         bash2.yy.walker(interpreter,absyn,env);
     }
 
 });
+
+
+
 
 

@@ -1,7 +1,7 @@
 /* lexical grammar */
 %lex
 digit                       [0-9]
-id                          [\/_\.a-zA-Z][\/_\.a-zA-Z0-9]*
+id                          [\$\/_\.\-a-zA-Z\,\{\}][\$\/_\-\.a-zA-Z0-9\,\{\}]*
 
 %%
 {digit}+				 	return 'NUMBER'
@@ -81,7 +81,7 @@ simple_command
 simple_command_element
 	: WORD  
     	{         	
-    		$$ = new yy.Node('WORD', yytext);
+    		$$ = yytext;
         }
     /*
 	| ASSIGNMENT_WORD { $$ = []; }

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script type="text/javascript">
+            if (location.hash.substr(1, 12) === "access_token") {
+                var targetOrigin = location.origin;
+                var accessToken = location.hash.substring(1);
+                window.opener.postMessage(accessToken, targetOrigin);
+            }
+        </script>
+    </head>
+    <body>
+    </body>
+</html>
