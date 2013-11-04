@@ -5,8 +5,6 @@ bash2.yy.Node = function (kind, data) {
     this.data = data;
 };
 
-
-
 require(['webida/webida', 'underscore', 'js/URIjs/URI', 'js/path'],
         function(webida, _, URI, Path) {
     var destFS;
@@ -45,9 +43,8 @@ require(['webida/webida', 'underscore', 'js/URIjs/URI', 'js/path'],
     })(jQuery);  
 
     jQuery(document).ready(function($) {
-//        $('#wash').wash(interp_, { prompt: '/' + '> '}); 
         var env = { pwd:'/', home:'/' } ;     
-        $('#wash').wash(gen_intep(env), { prompt: '/' + '> '});         
+        $('#wash').wash(gen_intep(env), { prompt: '/' + '> '});
     });
 
     //--------------------------------------------------------------------------    
@@ -96,7 +93,6 @@ require(['webida/webida', 'underscore', 'js/URIjs/URI', 'js/path'],
                             else { 
                                 echo(path + ': No such file or directory');                                
                             }
-                            console.log(env);
                         });                    
                     }
                     if (args.length === 0) { 
@@ -116,8 +112,8 @@ require(['webida/webida', 'underscore', 'js/URIjs/URI', 'js/path'],
                     }    
                     break;
             }
-            return env; // no update yet,
-            
+            console.log(env);  // 위에서 doIfExists가 env에 대한 aync update이기 때문에 제대로 반영 안됨
+            return env;            
         };    
     }       
     
@@ -140,7 +136,7 @@ require(['webida/webida', 'underscore', 'js/URIjs/URI', 'js/path'],
     }
 
     function walker (doit,n,acc) {
-        var recur = walker.bind(this, doit);
+        var recur = walker.bind(undefined, doit);
         
         switch (n.kind) { 
             case 'SIMPLE_LIST':
