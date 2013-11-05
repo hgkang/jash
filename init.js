@@ -1,6 +1,6 @@
 require.config({
     //baseUrl: getAppRootURL() + '/js',    
-    baseUrl: './',
+    baseUrl: '.',
     "paths": {
         webida: '//' + document.cookie.replace(/(?:(?:^|.*;\s*)webida\.host\s*\=\s*([^;]*).*$)|^.*$/, "$1"),
 //        webida: '//webida.js',

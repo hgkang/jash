@@ -5,6 +5,12 @@ bash2.yy.Node = function (kind, data) {
 };
 
 require(['js/interpreter'], function(Interp) {     
+    function interpreter (input, terminal) { 
+        var absyn = bash2.parse(input);
+        var iter = Interp.get_iter(terminal);
+        iter(function() {}, absyn);
+    }
+    
     (function($) {
         $.fn.wash = function(interp, options) {
             // 이미 wash 엘리먼트에 터미널 만들어져 있으면 그놈 사용
@@ -15,7 +21,7 @@ require(['js/interpreter'], function(Interp) {
             options = options || {};
             interp = interp || function(command, term) { term.echo("you don't set interp for wash"); };
             
-            var settings = { name: 'wash', height: 250, enabled: true, greetings: 'Welcome to "wash" world' };
+            var settings = { name: 'wash', height: 450, enabled: true, greetings: 'Welcome to "wash" world' };
             if (options) { $.extend(settings, options); }
             this.append('<div class="td"></div>');
             var self = this;
@@ -30,12 +36,6 @@ require(['js/interpreter'], function(Interp) {
     jQuery(document).ready(function($) {
         $('#wash').wash(interpreter, { prompt: '/' + '> '});
     });
-
-    function interpreter (input, terminal) { 
-        var absyn = bash2.parse(input);
-        var iter = Interp.get_iter(terminal);
-        iter(function() {}, absyn);
-    }
 });
 
 
