@@ -1,9 +1,12 @@
    
+
+
 define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, URI, Path, webida)  {
     
 	
     var destFS;
     var mount;
+    var userName;
            
     initAuth(webida,URI);
     
@@ -11,12 +14,13 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
         if (error) {  alert('Terminal app can be used only when logged in' + error.reason);   }
         else {
             destFS = user_info.fsid;
+            userName = user_info.username;            
             mount = webida.fs.mountByFsid(destFS);                        
             log('dstFS=',destFS);
+            //main();
         }
     });
-
-           
+    
     function get_iter (terminal) {             
         var f = simple_command.bind(undefined, terminal);
         function iter (continuation, n) {
@@ -53,7 +57,7 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
                 if (file.isDirectory) {
                     printer('\x1b[1;31m'+file.filename);
                 } else {
-                    printer(file.filename);
+                    printer('[[u;;]'+file.filename+']');
                 }                
             }
             mount.list(path, function (err, files) {
@@ -74,7 +78,7 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
         } else {
             normalized_path = Path.join(env.pwd, args[0]);
         }
-        list_dir(echo, normalized_path, continuation);
+        list_dir(terminal.echo, normalized_path, continuation);
     }
     
     function cd(args, env, terminal, continuation) {
@@ -93,13 +97,13 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
                     console.log(env);
                     continuation();
                 } else { 
-                    echo("jash: cd: " + path + ': No such file or directory');
+                    terminal.echo("jash: cd: " + path + ': No such file or directory');
                     continuation();
                 }
             });                    
         }
         if (args.length === 0) { 
-            normalized_path = env.home;
+            normalized_path = env.home; 
         } else if (args[0].charAt(0) == '/') {
             normalized_path = Path.join(args[0]);
         } else { 
@@ -108,17 +112,42 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
         doIfExists(normalized_path);
     }
      
+    function js(args, env, terminal, continuation) {
+        function js_interpreter(input, terminal) {
+            if (input !== '') {
+                try {
+                    var result = window.eval(input);
+                    //if (result !== undefined) {
+                        //terminal.echo(result);
+                        terminal.echo(new String(result));
+                    //} 
+                } catch(e) {
+                    terminal.error(new String(e));
+                }
+            } else if ( input === 'exit' ) {                
+                terminal.pop();
+                terminal.set_prompt(env.pwd + ' >'); 
+            } else {
+                terminal.echo('');
+            }
+        }
+		terminal.push(js_interpreter);
+        terminal.set_prompt('[[;#00ff00;]js>] ');
+        
+    }
+        
     var shell_command = {
         pwd: pwd,
         ls: ls,
-        cd: cd
+        cd: cd,
+        js: js
     };
     
     function simple_command (terminal, words, continuation) {
         log("[simple command]");
         console.log(terminal.env);
-        env = terminal.env;
-        echo = terminal.echo;
+        var env = terminal.env;
+        var echo = terminal.echo;
         function serror(s) { echo("Webida Server Error: "+s); }        
         var args = [];
         var normalized_path; 
@@ -127,15 +156,13 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
         }
         switch(words[0]) {
             case 'pwd':
+            case 'ls':
+            case 'cd':
+            case 'js':                
                 shell_command[words[0]](args, env, terminal, continuation);
                 break;
-            case 'ls': // 
-                shell_command[words[0]](args, env, terminal, continuation);
-                break;
-            case 'cd':                     
-                shell_command[words[0]](args, env, terminal, continuation);
-                break;                
             default:
+                //echo(function(){ return '[[guib;#000;#00ee11]sddome text]'; });
                 var str="";                
                 for (i=0; i<words.length; i++) {                    
                     str = str.concat(words[i]+' ');
@@ -147,7 +174,23 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
         
     }            
     
-    return {
-        get_iter: get_iter
+    bash2.yy.Node = function (kind, data) {
+        this.kind = kind;
+        this.data = data;
     };
+
+    function interpreter (input, terminal) { 
+        var absyn = bash2.parse(input);
+        var iter = get_iter(terminal);
+        iter(function() {}, absyn);
+    }
+    
+    
+    return {
+        userName: function() { return userName;},
+        interpreter: interpreter
+    };
+//    return {
+//        get_iter: get_iter
+//    };
 });

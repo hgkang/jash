@@ -27,6 +27,16 @@ function isString(arg) {
   return typeof arg === 'string';
 }
 
+function dir(obj) {
+    var result = '';
+    for (var property in obj) {
+        if (obj.hasOwnProperty(property)) {
+            result += property + ', ';
+        }
+    }
+    return result;
+}
+
 
 //$.extend_if_has = function(desc, source, array) {
 //    for (var i=array.length;i--;) {
