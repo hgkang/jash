@@ -19,7 +19,7 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida', 'js/sprintf'],
             //log('dstFS=',destFS);
             //main();
         }
-    });
+    }); 
     
     function get_iter (terminal) {             
         var f = simple_command.bind(undefined, terminal);
@@ -72,7 +72,7 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida', 'js/sprintf'],
             function print(file, callback) {
                 var head = sprintf("%10s ", file.ctime);
                 if (file.isDirectory) {
-                    head = sprintf("%s %8s \t %s", head, '<DIR>', file.filename);
+                    head = sprintf("%s %8s \t [[;#ff0000;]%s]", head, '<DIR>', file.filename);
                 } else {
                     head = sprintf("%s %8s \t [[;;]%s]", head, file.size, file.filename);
                 }
