@@ -21,6 +21,7 @@ function initAuth(webida, URI) {
         return redirectUrl.toString();
     }    
     webida.auth.initAuth(CLIENT_ID, getRedirectUrl());    
+    //webida.auth.initAuth(CLIENT_ID);    
 }
 
 

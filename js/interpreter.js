@@ -1,9 +1,9 @@
    
 
+define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida', 'js/sprintf'], function(_, URI, Path, webida, s)  {
 
-define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, URI, Path, webida)  {
+	var sprintf = s.sprintf;
     
-	
     var destFS;
     var mount;
     var userName;
@@ -16,7 +16,7 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
             destFS = user_info.fsid;
             userName = user_info.username;            
             mount = webida.fs.mountByFsid(destFS);                        
-            log('dstFS=',destFS);
+            //log('dstFS=',destFS);
             //main();
         }
     });
@@ -52,24 +52,58 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
     }
     
     function ls(args, env, terminal, continuation) {
-        function list_dir(printer, path, continuation) {
-            function print(file) {
-                if (file.isDirectory) {
-                    printer('\x1b[1;31m'+file.filename);
-                } else {
-                    printer('[[u;;]'+file.filename+']');
-                }                
+        function list_dir2(printer, path, continuation) {
+            function acl(file, callback) {
+                mount.getAcl(file.path, function(error, acl) {
+                    var result = '';
+                    if (error) {
+                        alert('getACLError: ' + error);
+                    }
+                    else {                        
+                        for (var prop in acl) {                            
+                            if (acl.hasOwnProperty(prop)) {
+                                result += prop + ':' + acl[prop] + ', ';
+                            }
+                        }    
+                    } 
+                    callback(null, result); // callback: (error, result) -> result'
+                });                
             }
-            mount.list(path, function (err, files) {
-                if (err) {
-                    printer("fail to list directory: '" + path + "':" + err);
+            function print(file, callback) {
+                var head = sprintf("%10s ", file.ctime);
+                if (file.isDirectory) {
+                    head = sprintf("%s %8s \t %s", head, '<DIR>', file.filename);
+                } else {
+                    head = sprintf("%s %8s \t [[;;]%s]", head, file.size, file.filename);
                 }
-                else {
-                    _.each(files, print);
-                    continuation();
-                } 
-            });
-        }        
+                callback(null, head);
+            }            
+            function print_it(file, callback) {
+                async.series(
+                    [
+                        print.bind(null, file),
+                        acl.bind(null, file)
+                    ],
+                    function(error, result) {
+                        var str = '';
+                        str = sprintf("%s \t [[i;;]%.20s]", result[0], result[1] === '' ? '' : '{'+result[1]+'}');
+                        printer(str);
+                    }
+                );                 
+                callback(null, null);
+            }
+            mount.list(path, function (err,files) {
+                if (err) {
+                    // 현재 file (not dir)인 경우 error로 뜨고 있는데, 고쳐져야 한다
+                    // 있으면 files에 하나만 들어오도록 수정
+                }
+                else { 
+                    async.each(files, print_it, continuation);
+                }
+                //continuation();
+            }); 
+        }
+        
         var normalized_path;
         if (args.length === 0) {
             normalized_path = env.pwd;
@@ -78,7 +112,51 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
         } else {
             normalized_path = Path.join(env.pwd, args[0]);
         }
-        list_dir(terminal.echo, normalized_path, continuation);
+        list_dir2(terminal.echo, normalized_path, continuation);
+    }
+    
+//    function geta(args, env, terminal, continuation) {
+//        function acl(file, callback) {
+//            mount.getAcl(file.path, function(error, acl) {
+//                if (error) {
+//                    alert('getACLError: ' + error);
+//                }
+//                else {                        
+//                    var result = 'ACL: ';
+//                    for (var prop in acl) {                            
+//                        if (acl.hasOwnProperty(prop)) {
+//                            result += prop + ' ';
+//                        }
+//                    }    
+//                    printer(result);
+//                } 
+//                callback();
+//            });                
+//        }
+//    }
+    function seta(args, env, terminal, continuation) {
+        function npath (env, str) {
+            if (str.charAt(0) == '/') {
+                return Path.join(str);
+            } else {
+                return Path.join(env.pwd, str);
+            }
+        }        
+        if (args.length !== 3) {
+            terminal.echo('Invalid arg number for seta');
+        } else { // 에러처리필요
+            mount.setAcl(npath(env,args[2]), {'hgkang':'rw'}, function(error) {
+                terminal.echo(error);
+                continuation();
+            });
+//            var path = npath(env, args[2]);
+//            var ac = args[0]; 
+//            var acl = {}[args[1]] = ac;
+//            mount.setAcl(path, acl, function(error) {
+//                terminal.echo(error);
+//            });
+        }        
+        
     }
     
     function cd(args, env, terminal, continuation) {
@@ -117,10 +195,7 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
             if (input !== '') {
                 try {
                     var result = window.eval(input);
-                    //if (result !== undefined) {
-                        //terminal.echo(result);
-                        terminal.echo(new String(result));
-                    //} 
+                    terminal.echo(new String(result));
                 } catch(e) {
                     terminal.error(new String(e));
                 }
@@ -132,15 +207,37 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
             }
         }
 		terminal.push(js_interpreter);
-        terminal.set_prompt('[[;#00ff00;]js>] ');
-        
+        terminal.set_prompt('[[;#00ff00;]js>] ');        
     }
         
+    
+    function dir(obj) {
+        var result = '';
+        for (var property in obj) {
+            if (obj.hasOwnProperty(property)) {
+                result += property + ', ';
+            }
+        }
+        return result;
+    }
+    
+    function help(args, env, terminal, continuation) {
+        terminal.echo(dir(shell_command));
+        continuation();
+    }
+    
     var shell_command = {
         pwd: pwd,
         ls: ls,
         cd: cd,
-        js: js
+        js: js,
+        seta: seta,
+        help: help, 
+        mv: todo,
+        mkdir: todo,
+        cp: todo,
+        touch: todo,
+        auto_completion: todo
     };
     
     function simple_command (terminal, words, continuation) {
@@ -154,24 +251,16 @@ define(['underscore', 'js/URIjs/URI', 'js/path', 'webida/webida'], function(_, U
         for (var i=1; i<words.length; i++) {
             args = args.concat(words[i]);  
         }
-        switch(words[0]) {
-            case 'pwd':
-            case 'ls':
-            case 'cd':
-            case 'js':                
-                shell_command[words[0]](args, env, terminal, continuation);
-                break;
-            default:
-                //echo(function(){ return '[[guib;#000;#00ee11]sddome text]'; });
-                var str="";                
-                for (i=0; i<words.length; i++) {                    
-                    str = str.concat(words[i]+' ');
-                }    
-                echo(str + ': command not found');
-                continuation();
-                break;
+        if (shell_command[words[0]] !== undefined) {
+            shell_command[words[0]](args, env, terminal, continuation);
+        } else {
+            var str="";                
+            for (i=0; i<words.length; i++) {                    
+                str = str.concat(words[i]+' ');
+            }    
+            echo(str + ': command not found');
+            continuation();
         }
-        
     }            
     
     bash2.yy.Node = function (kind, data) {
