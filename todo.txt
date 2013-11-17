@@ -1,4 +1,10 @@
 
+<11/17>
+command line argument 처리에 대한 일원화 필요 
+- args parsing 
+- args validation
+- help 지원 
+
 
 <10/5>
 jison bash2.jison; node './intep.js' 까지 완료 

@@ -1,41 +1,43 @@
-   
+bash2.yy.Node = function (kind, data) {
+    this.kind = kind;
+    this.data = data;
+};
+
+function empty_cb(error, result) {}   
 
 define(['js/path', 'js/sprintf'], function(Path, s)  {
 
 	var sprintf = s.sprintf;
-    
-//    var destFS;
-    //var mount;
-    
+
     var w;
-    function test(args, env, terminal, continuation) {                
+    function test(args, env, callback) {                
         if(typeof(Worker)!=="undefined") {
             if(typeof(w)=="undefined") {
                 w = new Worker("js/test_worker.js");
             }
             w.onmessage = function (event) {
-                terminal.echo(event.data);
+                env.terminal.echo(event.data);
             };
             //w.terminate();
         } else {
-            terminal.echo('Sorry, your browser does not support Web Workers...');
+            env.terminal.echo('Sorry, your browser does not support Web Workers...');
         }
         
-        continuation();
+        callback(null, env);
     }
     
-    function pwd(args, env, terminal, continuation) {
-        terminal.echo(env.pwd);
-        continuation();
+    function pwd(args, env, callback) {
+        env.terminal.echo(env.pwd);
+        callback(null, env);
     }
     
-    function ls(args, env, terminal, continuation) {
-        function list_dir2(printer, path, continuation) {
+    function ls(args, env, callback) {
+        function list_dir2(printer, path, callback) {
             function acl(file, callback) {
                 env.fs.getAcl(file.path, function(error, acl) {
                     var result = '';
                     if (error) {
-                        alert('getACLError: ' + error);
+                        alert('jash: getACLError: ' + error);
                     }
                     else {                        
                         for (var prop in acl) {                            
@@ -65,20 +67,24 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
                     function(error, result) {
                         var str = '';
                         str = sprintf("%s \t [[i;;]%.20s]", result[0], result[1] === '' ? '' : '{'+result[1]+'}');
-                        printer(str);
+                        printer(str);                        
+                        callback(null,env);
                     }
-                );                 
-                callback(null, null);
+                );      
+                
             }
             env.fs.list(path, function (err,files) {
                 if (err) {
                     // 현재 file (not dir)인 경우 error로 뜨고 있는데, 고쳐져야 한다
                     // 있으면 files에 하나만 들어오도록 수정
+                    //callback(null,env);
                 }
                 else { 
-                    async.each(files, print_it, continuation);
+                    async.each(files, print_it, function(err) { 
+                        callback(null,env); 
+                    } );
+                    //callback(null, env);
                 }
-                //continuation();
             }); 
         }
         
@@ -90,29 +96,38 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
         } else {
             normalized_path = Path.join(env.pwd, args[0]);
         }
-        list_dir2(terminal.echo, normalized_path, continuation);
+        list_dir2(env.terminal.echo, normalized_path, callback);
     }
     
-//    function geta(args, env, terminal, continuation) {
-//        function acl(file, callback) {
-//            env.fsgetAcl(file.path, function(error, acl) {
-//                if (error) {
-//                    alert('getACLError: ' + error);
-//                }
-//                else {                        
-//                    var result = 'ACL: ';
-//                    for (var prop in acl) {                            
-//                        if (acl.hasOwnProperty(prop)) {
-//                            result += prop + ' ';
-//                        }
-//                    }    
-//                    printer(result);
-//                } 
-//                callback();
-//            });                
-//        }
-//    }
-    function seta(args, env, terminal, continuation) {
+    function geta(args, env, callback) {
+        if (args.length !== 1) {
+            env.terminal.echo('geta: number of args should be 1');
+            callback(null, env);
+        } else {
+            var npath = Path.join(env.pwd, args[0]);
+            
+            env.fs.exists(npath, function(e, exists) {
+                if (e) {
+                    error(e); callback(null, env);
+                } else if (exists) {
+                    env.fs.getAcl(npath, function(e, acl) {
+                        if (e) alert('jash: getACLError: ' + e);
+                        else {
+                            for (var prop in acl) {
+                                env.terminal.echo(prop + ':' + acl[prop]);
+                            }
+                            callback(null,env);
+                        }
+                    });
+                } else { 
+                    env.terminal.echo("jash: geta: " + npath + ': No such file or directory');
+                    callback(null, env);
+                }
+            });
+        }        
+    }
+        
+    function seta(args, env, callback) {
         function npath (env, str) {
             if (str.charAt(0) == '/') {
                 return Path.join(str);
@@ -121,34 +136,37 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
             }
         }        
         if (args.length !== 3) {
-            terminal.echo('Invalid arg number for seta');
-        } else { // 에러처리필요
-            env.fs.setAcl(npath(env,args[2]), {'hgkang':'rw'}, function(error) {
-                terminal.echo(error);
-                continuation();
+            env.terminal.echo('jash: Invalid arg number for seta');
+        } else { // input 에러처리필요 
+            acl = {};
+            acl[args[0]] = args[1]; // arg
+            env.fs.setAcl(npath(env,args[2]), acl, function(error) {
+                env.terminal.echo(error);
+                callback(null, env);
             });
         }        
-        
     }
     
-    function cd(args, env, terminal, continuation) {
+        
+    
+    function cd(args, env, callback) {
         var normalized_path;
         function set_pwd(path) {
             env.pwd = path;
-            terminal.set_prompt(env.pwd + '> ');
+            env.terminal.set_prompt(env.pwd + '> ');
         }
         function doIfExists(path) {
-            env.fs.exists(path, function(error, exists) {
-                if (error) serror(error);
+            env.fs.exists(path, function(e, exists) {
+                if (e) error(e);
                 // 성공 (해당 디렉토리 존재) 했을때만 pwd 설정하도록
                 else if (exists) {
                     env.pwd = path;
                     set_pwd(env.pwd);
-                    console.log(env);
-                    continuation();
+                    //console.log(env);
+                    callback(null, env);
                 } else { 
-                    terminal.echo("jash: cd: " + path + ': No such file or directory');
-                    continuation();
+                    env.terminal.echo("jash: cd: " + path + ': No such file or directory');
+                    callback(null, env);
                 }
             });                    
         }
@@ -162,7 +180,7 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
         doIfExists(normalized_path);
     }
      
-    function js(args, env, terminal, continuation) {
+    function js(args, env, callback) {
         function js_interpreter(input, terminal) {
             if (input !== '') {
                 try {
@@ -178,8 +196,9 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
                 terminal.echo('');
             }
         }
-		terminal.push(js_interpreter);
-        terminal.set_prompt('[[;#00ff00;]js>] ');        
+		env.terminal.push(js_interpreter);
+        env.terminal.set_prompt('[[;#00ff00;]js>] ');     
+        // callback 유실
     }
         
     
@@ -193,9 +212,9 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
         return result;
     }
     
-    function help(args, env, terminal, continuation) {
-        terminal.echo(dir(shell_command));
-        continuation();
+    function help(args, env, callback) {
+        env.terminal.echo(dir(shell_command));
+        callback(null, env);
     }
     
     var shell_command = {
@@ -204,6 +223,7 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
         cd: cd,
         js: js,
         seta: seta,
+        geta: geta,
         help: help, 
         test: test,
         mv: todo,
@@ -213,66 +233,49 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
         auto_completion: todo
     };
     
-    function simple_command (terminal, words, continuation) {
-        //log("[simple command]");
-        //console.log(terminal.env);
-        var env = terminal.env;
-        var echo = terminal.echo;
-        function serror(s) { echo("Webida Server Error: "+s); }        
+    function simple_command (env, words, callback) {
         var args = [];
         var normalized_path; 
         for (var i=1; i<words.length; i++) {
             args = args.concat(words[i]);  
         }
         if (shell_command[words[0]] !== undefined) {
-            shell_command[words[0]](args, env, terminal, continuation);
+            shell_command[words[0]](args, env, callback);
         } else {
             var str="";                
             for (i=0; i<words.length; i++) {                    
                 str = str.concat(words[i]+' ');
             }    
-            echo(str + ': command not found');
-            continuation();
+            env.terminal.echo(str + ': command not found');
+            callback(null, env);
         }
     }            
-    
-    bash2.yy.Node = function (kind, data) {
-        this.kind = kind;
-        this.data = data;
-    };
 
-    function get_iter (terminal) {             
-        var f = simple_command.bind(undefined, terminal);
-        function iter (continuation, n) {
-            //            console.log (n);
+    function interp(input, terminal) {    
+        var absyn = bash2.parse(input);
+        function simple_command_list (n, acc) {
             switch (n.kind) {
                 case 'SIMPLE_LIST':
                 case 'COMMAND': 
                 case 'PIPELINE_COMMAND':
-                    iter (continuation, n.data);
+                    acc = simple_command_list(n.data, acc);
                     break;
-                case 'PIPELINE_COMMAND_LIST':
-                    if (n.data.length ===0) {
-                        continuation();
-                    } else {
-                        var hd = n.data.shift(); // side effect로 n.data를 tail(n.data)로 바뀐다. 
-                        iter(iter.bind(undefined, continuation, n), hd);
+                case 'PIPELINE_COMMAND_LIST':                    
+                    for (var i=0; i< n.data.length; i++) {
+                        acc = simple_command_list(n.data[i], acc);                
                     }
                     break;
                 case 'SIMPLE_COMMAND':
-                    f(n.data, continuation);
-            }            
+                    acc.push(n.data);
+                    break;
+            }                        
+            return acc;
         }
-        return iter;
+        
+        async.reduce(simple_command_list (absyn, []), terminal.env, simple_command, empty_cb);
     }
     
     
-    function interpreter (input, terminal) { 
-        var absyn = bash2.parse(input);
-        var iter = get_iter(terminal);
-        iter(function() {}, absyn);
-    }
-    
-    return interpreter;
+    return interp;
 
 });
