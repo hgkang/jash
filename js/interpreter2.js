@@ -34,7 +34,7 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
     function ls(args, env, callback) {
         function list_dir2(printer, path, callback) {
             function acl(file, callback) {
-                env.fs.getAcl(file.path, function(error, acl) {
+                env.fs.getACL(file.path, function(error, acl) {
                     var result = '';
                     if (error) {
                         alert('jash: getACLError: ' + error);
@@ -110,7 +110,7 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
                 if (e) {
                     error(e); callback(null, env);
                 } else if (exists) {
-                    env.fs.getAcl(npath, function(e, acl) {
+                    env.fs.getACL(npath, function(e, acl) {
                         if (e) alert('jash: getACLError: ' + e);
                         else {
                             for (var prop in acl) {
@@ -137,17 +137,16 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
         }        
         if (args.length !== 3) {
             env.terminal.echo('jash: Invalid arg number for seta');
+            callback(null,env);
         } else { // input 에러처리필요 
             acl = {};
             acl[args[0]] = args[1]; // arg
-            env.fs.setAcl(npath(env,args[2]), acl, function(error) {
+            env.fs.setACL(npath(env,args[2]), acl, function(error) {
                 env.terminal.echo(error);
                 callback(null, env);
             });
         }        
     }
-    
-        
     
     function cd(args, env, callback) {
         var normalized_path;
@@ -162,7 +161,6 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
                 else if (exists) {
                     env.pwd = path;
                     set_pwd(env.pwd);
-                    //console.log(env);
                     callback(null, env);
                 } else { 
                     env.terminal.echo("jash: cd: " + path + ': No such file or directory');
@@ -230,6 +228,10 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
         mkdir: todo,
         cp: todo,
         touch: todo,
+        more: todo,
+        http: todo,
+        rest_api_test: todo,
+        man: todo,        
         auto_completion: todo
     };
     
@@ -272,7 +274,7 @@ define(['js/path', 'js/sprintf'], function(Path, s)  {
             return acc;
         }
         
-        async.reduce(simple_command_list (absyn, []), terminal.env, simple_command, empty_cb);
+        async.reduce(simple_command_list(absyn, []), terminal.env, simple_command, empty_cb);
     }
     
     
