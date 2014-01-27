@@ -1,7 +1,7 @@
 
 
 
-require(['js/interpreter2', 'webida/webida-0.2', 'js/URIjs/URI'], function(interp, webida, URI) {     
+require(['js/interpreter2', 'webida-lib/webida-0.3', 'js/URIjs/URI', 'app-config'], function(interp, webida, URI, appConfig) {     
     (function($) {
         $.fn.wash = function(interp, options, env) {
             // 이미 wash 엘리먼트에 터미널 만들어져 있으면 그놈 사용
@@ -31,7 +31,7 @@ require(['js/interpreter2', 'webida/webida-0.2', 'js/URIjs/URI'], function(inter
   
     function login(callback) {
         var env = { pwd:'/', home:'/'};
-        initAuth(webida,URI);
+        initAuth(webida, URI, appConfig);
         
         webida.auth.getMyInfo (function(error, user_info) {
             if (error) {  alert('Terminal app can be used only when logged in' + error);   }
